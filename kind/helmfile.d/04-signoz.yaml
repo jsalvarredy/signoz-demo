@@ -1,0 +1,11 @@
+repositories:
+  - name: signoz
+    url: https://charts.signoz.io
+
+releases:
+  - name: signoz
+    namespace: monitoring
+    chart: signoz/signoz
+    version: 0.104.x  # Pinning a version is good practice
+    values:
+      - values/signoz/values.yaml

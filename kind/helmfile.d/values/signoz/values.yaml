@@ -1,0 +1,68 @@
+global:
+  storageClass: standard
+
+# Disable ClickHouse operator to use the bundled ClickHouse
+clickhouse:
+  enabled: true
+  layout: SingleNode
+
+# Tuning for small environments (Kind)
+clickhouse:
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1
+      memory: 2Gi
+
+query-service:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+frontend:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+      - host: signoz.localhost
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            port: 8080
+
+otel-collector:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Alertmanager is heavy, disable if not strictly needed for this demo, 
+# but usually part of the stack. Keeping it with low resources.
+alertmanager:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+# Disable hotrod demo app that comes with Signoz sometimes
+hotrod:
+  enabled: false
+
+
+
