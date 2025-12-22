@@ -56,13 +56,23 @@ else
 fi
 
 # ============================================================================
-# BUILD AND LOAD DEMO APPLICATION
+# BUILD AND LOAD DEMO APPLICATIONS
 # ============================================================================
-echo "🔨 Building OTEL demo app Docker image..."
+echo "🔨 Building OTEL demo app Docker images..."
+
+# Build Node.js app
+echo "  📦 Building Node.js app..."
 docker build -t otel-demo-app:latest src/otel-app
-echo "📤 Loading image into Kind cluster..."
+
+# Build Python app
+echo "  🐍 Building Python app..."
+docker build -t otel-python-app:latest src/otel-python-app
+
+# Load images into Kind cluster
+echo "📤 Loading images into Kind cluster..."
 kind load docker-image otel-demo-app:latest --name signoz-demo
-echo "✅ Demo app image ready"
+kind load docker-image otel-python-app:latest --name signoz-demo
+echo "✅ Demo app images ready"
 
 # ============================================================================
 # INSTALL CLICKHOUSE OPERATOR CRDS
@@ -117,22 +127,35 @@ kubectl apply -f kind/signoz-ingress.yaml
 echo "✅ Signoz is accessible via Ingress"
 
 # ============================================================================
-# INSTALL OTEL DEMO APPLICATION
+# INSTALL OTEL DEMO APPLICATIONS
 # ============================================================================
-echo "🚀 Deploying OpenTelemetry Demo Application..."
+echo "🚀 Deploying OpenTelemetry Demo Applications..."
+
+# Deploy Node.js app
+echo "  📦 Deploying Node.js app..."
 helm upgrade --install otel-demo-app charts/otel-demo-app \
   --namespace demo \
   --create-namespace \
   -f charts/otel-demo-app/values.yaml \
   --wait \
   --timeout 3m
-echo "✅ Demo app deployed"
+
+# Deploy Python app
+echo "  🐍 Deploying Python app..."
+helm upgrade --install otel-python-app charts/otel-python-app \
+  --namespace demo \
+  -f charts/otel-python-app/values.yaml \
+  --wait \
+  --timeout 3m
+
+echo "✅ Demo apps deployed"
 
 # ============================================================================
 # WAIT FOR APPLICATION READINESS
 # ============================================================================
-echo "⏳ Waiting for demo app to be ready..."
+echo "⏳ Waiting for demo apps to be ready..."
 kubectl rollout status deployment/otel-demo-app -n demo --timeout=120s
+kubectl rollout status deployment/otel-python-app -n demo --timeout=120s
 
 # ============================================================================
 # GENERATE SAMPLE TRAFFIC
@@ -142,10 +165,18 @@ echo "   This will create traces, logs, and metrics in Signoz"
 
 # Generate diverse traffic to different endpoints
 for i in {1..5}; do
+  # Node.js app traffic
   curl -s -H "Host: otel-example.localhost" http://localhost/ > /dev/null || true
   curl -s -H "Host: otel-example.localhost" http://localhost/rolldice > /dev/null || true
   curl -s -H "Host: otel-example.localhost" http://localhost/work > /dev/null || true
   curl -s -H "Host: otel-example.localhost" http://localhost/health > /dev/null || true
+  
+  # Python app traffic
+  curl -s -H "Host: python-otel-example.localhost" http://localhost/ > /dev/null || true
+  curl -s -H "Host: python-otel-example.localhost" http://localhost/rolldice > /dev/null || true
+  curl -s -H "Host: python-otel-example.localhost" http://localhost/work > /dev/null || true
+  curl -s -H "Host: python-otel-example.localhost" http://localhost/health > /dev/null || true
+  
   echo -n "."
   sleep 1
 done
@@ -190,23 +221,32 @@ echo "   User:     admin@mikroways.net"
 echo "   Password: Mikroways123!"
 echo ""
 echo "🚀 Demo Application Endpoints:"
-echo "   Base:     http://otel-example.localhost/"
-echo "   Dice:     http://otel-example.localhost/rolldice"
-echo "   Work:     http://otel-example.localhost/work"
-echo "   Health:   http://otel-example.localhost/health"
+echo ""
+echo "   Node.js App:"
+echo "   - Base:     http://otel-example.localhost/"
+echo "   - Dice:     http://otel-example.localhost/rolldice"
+echo "   - Work:     http://otel-example.localhost/work"
+echo "   - Health:   http://otel-example.localhost/health"
+echo ""
+echo "   Python App:"
+echo "   - Base:     http://python-otel-example.localhost/"
+echo "   - Dice:     http://python-otel-example.localhost/rolldice"
+echo "   - Work:     http://python-otel-example.localhost/work"
+echo "   - Health:   http://python-otel-example.localhost/health"
 echo ""
 echo "📝 Important Notes:"
-echo "   - Add to /etc/hosts: 127.0.0.1 signoz.localhost otel-example.localhost"
+echo "   - Add to /etc/hosts: 127.0.0.1 signoz.localhost otel-example.localhost python-otel-example.localhost"
 echo "   - Generate more traffic by visiting the demo app endpoints"
 echo "   - Check Signoz for:"
 echo "     • Traces (see request flow and performance)"
 echo "     • Metrics (http_requests_total, dice_roll_value, etc.)"
-echo "     • Logs (structured JSON logs from the app)"
+echo "     • Logs (structured JSON logs from the apps)"
 echo ""
 echo "🎯 What to explore in Signoz:"
-echo "   1. Go to 'Services' → click 'otel-demo-app'"
-echo "   2. Go to 'Traces' → see individual requests"
-echo "   3. Go to 'Logs' → see structured application logs"
+echo "   1. Go to 'Services' → see both 'otel-demo-app' (Node.js) and 'otel-python-app' (Python)"
+echo "   2. Go to 'Traces' → compare traces from both applications"
+echo "   3. Go to 'Logs' → see structured application logs from both apps"
 echo "   4. Go to 'Dashboards' → create custom visualizations"
+echo "   5. Notice how OpenTelemetry works seamlessly across different languages!"
 echo ""
-echo "════════════════════════════════════════════════════════════════"
+echo "═══════════════════════════════════════════════════════════════="
