@@ -145,6 +145,23 @@ app.get('/work', (req, res) => {
 });
 
 // Health check endpoint
+app.get('/error', (req, res) => {
+  const span = trace.getSpan(context.active());
+
+  emitLog('ERROR', 'Simulated error on /error endpoint', {
+    path: '/error',
+    status: 500
+  });
+
+  // Set span status to error
+  span.setStatus({ code: SpanStatusCode.ERROR, message: 'Simulated service error' });
+
+  res.status(500).json({
+    status: 'error',
+    message: 'Simulated internal server error'
+  });
+});
+
 app.get('/health', (req, res) => {
   requestCounter.add(1, { endpoint: '/health', method: 'GET' });
   emitLog('INFO', 'Health check', {

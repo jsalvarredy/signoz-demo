@@ -38,7 +38,7 @@ This repository demonstrates a **production-grade observability setup** that you
 │  │ Signoz   │ │ Node.js    │ │  Python    │ │      │
 │  │          │ │  Demo      │ │   Demo     │ │      │
 │  │  • UI    │ │            │ │            │ │      │
-│  │  • Query │◄─┤ OTEL SDK   │◄─┤ OTEL SDK   │ │      │
+│  │  • Query │◄─┤ OTEL SDK   │◄─┤ OTEL SDK   │ │     │
 │  │  • OTEL  │ │  • Traces  │ │  • Traces  │ │      │
 │  │  • Click │ │  • Metrics │ │  • Metrics │ │      │
 │  │  House   │ │  • Logs    │ │  • Logs    │ │      │
@@ -87,7 +87,7 @@ The script will:
 Add these entries to your `/etc/hosts` file:
 
 ```bash
-127.0.0.1 signoz.localhost otel-example.localhost
+127.0.0.1 signoz.localhost otel-example.localhost python-otel-example.localhost
 ```
 
 **On macOS/Linux**:
@@ -125,6 +125,7 @@ Both demo applications expose the same endpoints to showcase identical observabi
 | **`/`** | Welcome page | Basic request tracing, metrics |
 | **`/rolldice`** | Dice roll simulator | Custom metrics (histogram), span attributes |
 | **`/work`** | Simulated work | Nested spans (DB + API), multi-operation tracing |
+| **`/error`** | Error simulation | 500 status code, error span status, error logs |
 | **`/health`** | Health check | Simple monitoring endpoint |
 
 #### Python Application (python-otel-example.localhost)
@@ -134,6 +135,7 @@ Both demo applications expose the same endpoints to showcase identical observabi
 | **`/`** | Welcome page | Basic request tracing, metrics |
 | **`/rolldice`** | Dice roll simulator | Custom metrics (histogram), span attributes |
 | **`/work`** | Simulated work | Nested spans (DB + API), multi-operation tracing |
+| **`/error`** | Error simulation | 500 status code, error span status, error logs |
 | **`/health`** | Health check | Simple monitoring endpoint |
 
 ### Generate Traffic
@@ -142,12 +144,14 @@ Both demo applications expose the same endpoints to showcase identical observabi
 # Generate diverse traffic patterns to both applications
 for i in {1..20}; do
   # Node.js app
-  curl http://otel-example.localhost/rolldice
-  curl http://otel-example.localhost/work
+  curl -s http://otel-example.localhost/rolldice > /dev/null
+  curl -s http://otel-example.localhost/work > /dev/null
+  curl -s http://otel-example.localhost/error > /dev/null
   
   # Python app
-  curl http://python-otel-example.localhost/rolldice
-  curl http://python-otel-example.localhost/work
+  curl -s http://python-otel-example.localhost/rolldice > /dev/null
+  curl -s http://python-otel-example.localhost/work > /dev/null
+  curl -s http://python-otel-example.localhost/error > /dev/null
   
   sleep 1
 done
@@ -188,6 +192,26 @@ done
 - Click on any trace to see associated logs
 - Switch between traces, metrics, and logs for the same request
 - Understand how the **three pillars of observability** work together
+
+### 5. **Professional Dashboard** 📊
+
+The demo now includes a comprehensive, production-ready dashboard that is **automatically imported** during setup.
+
+**📘 [Dashboard Guide & Details](./DASHBOARD_GUIDE.md)**
+
+The pre-configured dashboard includes:
+- **20+ panels** showcasing the power of SigNoz
+- **Multi-language comparison** (Node.js vs Python side-by-side)
+- **Golden signals monitoring** (latency, traffic, errors, saturation)
+- **Custom business metrics** (dice roll distributions, endpoint analytics)
+- **Log correlation** with automatic trace linking
+
+**How to access**:
+1. Run `./setup.sh` (The dashboard is imported automatically)
+2. Login to [http://signoz.localhost](http://signoz.localhost)
+3. Navigate to **Dashboards** and select **"OpenTelemetry Demo - Professional Overview"**
+
+> 💡 **Tip**: Check the [Dashboard Guide](./DASHBOARD_GUIDE.md) for detailed explanations of each panel and manual setup instructions if you want to customize your own!
 
 ## 🔧 Technical Details
 
@@ -250,6 +274,10 @@ logger.emit({
 .
 ├── setup.sh                      # Main setup script
 ├── README.md                     # This file
+├── DASHBOARD_GUIDE.md            # Professional dashboard setup guide
+│
+├── dashboards/                   # Pre-configured dashboard templates
+│   └── otel-demo-dashboard-v1.json
 │
 ├── src/
 │   ├── otel-app/                 # Node.js demo application
@@ -421,11 +449,19 @@ This will delete the cluster and all resources. Your Docker images will remain c
 
 This is a demonstration repository. Feel free to fork and adapt for your own needs!
 
-Suggestions for improvement:
-- Additional language examples (Go, Java, Ruby)
+**Current Features**:
+- ✅ Multi-language examples (Node.js and Python)
+- ✅ Professional dashboard guide with 20+ panels
+- ✅ Comprehensive observability (traces, metrics, logs)
+- ✅ Production-ready instrumentation patterns
+
+Suggestions for further improvement:
+- Additional language examples (Go, Java, Ruby, Rust)
 - More complex microservice scenarios with service-to-service communication
-- Custom Signoz dashboards and alerts
-- Integration with other observability tools
+- Custom Signoz alert configurations
+- Integration with other observability tools (Prometheus, Grafana)
+- Kubernetes-native instrumentation examples
+- Performance testing scenarios
 
 ## ⚖️ License
 
