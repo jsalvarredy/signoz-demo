@@ -1,0 +1,482 @@
+{
+  "description": "Professional multi-service observability overview",
+  "tags": [
+    "opentelemetry",
+    "production",
+    "apm"
+  ],
+  "title": "OpenTelemetry Demo - Overview",
+  "version": "v4",
+  "variables": {
+    "service_name": {
+      "allSelected": true,
+      "id": "v-service-name",
+      "multiSelect": true,
+      "name": "service_name",
+      "queryValue": "SELECT JSONExtractString(labels, 'service.name') AS `service_name` FROM signoz_metrics.time_series_v4_1day WHERE (metric_name = 'signoz_calls_total') GROUP BY `service_name` ORDER BY `service_name` ASC",
+      "showALLOption": true,
+      "type": "QUERY"
+    }
+  },
+  "layout": [
+    {
+      "h": 6,
+      "i": "p-stacked-reqs",
+      "w": 12,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 6,
+      "i": "p-latency-p99",
+      "w": 6,
+      "x": 0,
+      "y": 6
+    },
+    {
+      "h": 6,
+      "i": "p-error-rate",
+      "w": 6,
+      "x": 6,
+      "y": 6
+    },
+    {
+      "h": 6,
+      "i": "p-endpoints-table",
+      "w": 12,
+      "x": 0,
+      "y": 12
+    },
+    {
+      "h": 6,
+      "i": "p-dice-node",
+      "w": 12,
+      "x": 0,
+      "y": 18
+    }
+  ],
+  "widgets": [
+    {
+      "id": "p-stacked-reqs",
+      "title": "Requests per Second (Stacked by Service)",
+      "panelTypes": "graph",
+      "isStacked": true,
+      "yAxisUnit": "reqps",
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "metrics",
+              "aggregateOperator": "rate",
+              "aggregateAttribute": {
+                "dataType": "float64",
+                "id": "signoz_calls_total--float64--Sum--true",
+                "isColumn": true,
+                "isJSON": false,
+                "key": "signoz_calls_total",
+                "type": "Sum"
+              },
+              "timeAggregation": "rate",
+              "spaceAggregation": "sum",
+              "groupBy": [
+                {
+                  "dataType": "string",
+                  "id": "service.name--string--tag--false",
+                  "isColumn": false,
+                  "isJSON": false,
+                  "key": "service.name",
+                  "type": "tag"
+                }
+              ],
+              "filters": {
+                "items": [
+                  {
+                    "id": "f1",
+                    "key": {
+                      "dataType": "string",
+                      "id": "service.name--string--tag--false",
+                      "isColumn": false,
+                      "isJSON": false,
+                      "key": "service.name",
+                      "type": "tag"
+                    },
+                    "op": "in",
+                    "value": [
+                      "{{.service_name}}"
+                    ]
+                  }
+                ],
+                "op": "AND"
+              },
+              "legend": "{{service.name}}",
+              "stepInterval": 60,
+              "disabled": false
+            }
+          ],
+          "queryFormulas": []
+        },
+        "promql": [
+          {
+            "disabled": false,
+            "legend": "",
+            "name": "A",
+            "query": ""
+          }
+        ],
+        "clickhouse_sql": [
+          {
+            "disabled": false,
+            "legend": "",
+            "name": "A",
+            "query": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "p-latency-p99",
+      "title": "P99 Latency (ms)",
+      "panelTypes": "graph",
+      "yAxisUnit": "ms",
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "metrics",
+              "aggregateOperator": "count",
+              "aggregateAttribute": {
+                "dataType": "float64",
+                "id": "signoz_latency.bucket--float64--Histogram--true",
+                "isColumn": true,
+                "isJSON": false,
+                "key": "signoz_latency.bucket",
+                "type": "Histogram"
+              },
+              "timeAggregation": "",
+              "spaceAggregation": "p99",
+              "groupBy": [
+                {
+                  "dataType": "string",
+                  "id": "service.name--string--tag--false",
+                  "isColumn": false,
+                  "isJSON": false,
+                  "key": "service.name",
+                  "type": "tag"
+                }
+              ],
+              "filters": {
+                "items": [
+                  {
+                    "id": "f2",
+                    "key": {
+                      "dataType": "string",
+                      "id": "service.name--string--tag--false",
+                      "isColumn": false,
+                      "isJSON": false,
+                      "key": "service.name",
+                      "type": "tag"
+                    },
+                    "op": "in",
+                    "value": [
+                      "{{.service_name}}"
+                    ]
+                  }
+                ],
+                "op": "AND"
+              },
+              "legend": "{{service.name}} p99",
+              "stepInterval": 60,
+              "disabled": false
+            }
+          ],
+          "queryFormulas": []
+        },
+        "promql": [
+          {
+            "disabled": false,
+            "legend": "",
+            "name": "A",
+            "query": ""
+          }
+        ],
+        "clickhouse_sql": [
+          {
+            "disabled": false,
+            "legend": "",
+            "name": "A",
+            "query": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "p-error-rate",
+      "title": "Error Rate (Total Errors/sec)",
+      "panelTypes": "graph",
+      "yAxisUnit": "reqps",
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "metrics",
+              "aggregateOperator": "rate",
+              "aggregateAttribute": {
+                "dataType": "float64",
+                "id": "signoz_calls_total--float64--Sum--true",
+                "isColumn": true,
+                "isJSON": false,
+                "key": "signoz_calls_total",
+                "type": "Sum"
+              },
+              "timeAggregation": "rate",
+              "spaceAggregation": "sum",
+              "groupBy": [
+                {
+                  "dataType": "string",
+                  "id": "service.name--string--tag--false",
+                  "isColumn": false,
+                  "isJSON": false,
+                  "key": "service.name",
+                  "type": "tag"
+                }
+              ],
+              "filters": {
+                "items": [
+                  {
+                    "id": "f3",
+                    "key": {
+                      "dataType": "string",
+                      "id": "service.name--string--tag--false",
+                      "isColumn": false,
+                      "isJSON": false,
+                      "key": "service.name",
+                      "type": "tag"
+                    },
+                    "op": "in",
+                    "value": [
+                      "{{.service_name}}"
+                    ]
+                  },
+                  {
+                    "id": "f4",
+                    "key": {
+                      "dataType": "string",
+                      "id": "status.code--string--tag--false",
+                      "isColumn": false,
+                      "isJSON": false,
+                      "key": "status.code",
+                      "type": "tag"
+                    },
+                    "op": "=",
+                    "value": "STATUS_CODE_ERROR"
+                  }
+                ],
+                "op": "AND"
+              },
+              "legend": "{{service.name}} errors",
+              "stepInterval": 60,
+              "disabled": false
+            }
+          ],
+          "queryFormulas": []
+        },
+        "promql": [
+          {
+            "disabled": false,
+            "legend": "",
+            "name": "A",
+            "query": ""
+          }
+        ],
+        "clickhouse_sql": [
+          {
+            "disabled": false,
+            "legend": "",
+            "name": "A",
+            "query": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "p-endpoints-table",
+      "title": "Top Operations & Throughput Breakdown",
+      "panelTypes": "table",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "metrics",
+              "aggregateOperator": "rate",
+              "aggregateAttribute": {
+                "dataType": "float64",
+                "id": "signoz_calls_total--float64--Sum--true",
+                "isColumn": true,
+                "isJSON": false,
+                "key": "signoz_calls_total",
+                "type": "Sum"
+              },
+              "timeAggregation": "rate",
+              "spaceAggregation": "sum",
+              "groupBy": [
+                {
+                  "dataType": "string",
+                  "id": "service.name--string--tag--false",
+                  "isColumn": false,
+                  "isJSON": false,
+                  "key": "service.name",
+                  "type": "tag"
+                },
+                {
+                  "dataType": "string",
+                  "id": "http.route--string--tag--false",
+                  "isColumn": false,
+                  "isJSON": false,
+                  "key": "http.route",
+                  "type": "tag"
+                }
+              ],
+              "filters": {
+                "items": [
+                  {
+                    "id": "f5",
+                    "key": {
+                      "dataType": "string",
+                      "id": "service.name--string--tag--false",
+                      "isColumn": false,
+                      "isJSON": false,
+                      "key": "service.name",
+                      "type": "tag"
+                    },
+                    "op": "in",
+                    "value": [
+                      "{{.service_name}}"
+                    ]
+                  }
+                ],
+                "op": "AND"
+              },
+              "legend": "{{service.name}} - {{http.route}}",
+              "stepInterval": 60,
+              "disabled": false
+            }
+          ],
+          "queryFormulas": []
+        },
+        "promql": [
+          {
+            "disabled": false,
+            "legend": "",
+            "name": "A",
+            "query": ""
+          }
+        ],
+        "clickhouse_sql": [
+          {
+            "disabled": false,
+            "legend": "",
+            "name": "A",
+            "query": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "p-dice-node",
+      "title": "Dice Roll Distribution (Node.js categorical view)",
+      "panelTypes": "graph",
+      "yAxisUnit": "none",
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "metrics",
+              "aggregateOperator": "count",
+              "aggregateAttribute": {
+                "dataType": "float64",
+                "id": "dice_roll_value--float64--Sum--true",
+                "isColumn": true,
+                "isJSON": false,
+                "key": "dice_roll_value",
+                "type": "Sum"
+              },
+              "timeAggregation": "count",
+              "spaceAggregation": "sum",
+              "groupBy": [
+                {
+                  "dataType": "string",
+                  "id": "dice.value--string--tag--false",
+                  "isColumn": false,
+                  "isJSON": false,
+                  "key": "dice.value",
+                  "type": "tag"
+                }
+              ],
+              "filters": {
+                "items": [
+                  {
+                    "id": "f6",
+                    "key": {
+                      "dataType": "string",
+                      "id": "service.name--string--tag--false",
+                      "isColumn": false,
+                      "isJSON": false,
+                      "key": "service.name",
+                      "type": "tag"
+                    },
+                    "op": "=",
+                    "value": "otel-app"
+                  }
+                ],
+                "op": "AND"
+              },
+              "legend": "Value: {{dice.value}}",
+              "stepInterval": 60,
+              "disabled": false
+            }
+          ],
+          "queryFormulas": []
+        },
+        "promql": [
+          {
+            "disabled": false,
+            "legend": "",
+            "name": "A",
+            "query": ""
+          }
+        ],
+        "clickhouse_sql": [
+          {
+            "disabled": false,
+            "legend": "",
+            "name": "A",
+            "query": ""
+          }
+        ]
+      }
+    }
+  ]
+}

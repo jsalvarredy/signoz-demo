@@ -169,6 +169,19 @@ def work():
             'operations': ['database-query', 'external-api-call']
         })
 
+@app.route('/error')
+def error():
+    with tracer.start_as_current_span('handle-error-request') as span:
+        emit_log('ERROR', 'Simulated error on /error endpoint', path='/error', status=500)
+        
+        # Set OTEL status to error
+        span.set_status(trace.Status(trace.StatusCode.ERROR, "Simulated service error"))
+        
+        return jsonify({
+            'status': 'error',
+            'message': 'Simulated internal server error'
+        }), 500
+
 @app.route('/health')
 def health():
     request_counter.add(1, {'endpoint': '/health', 'method': 'GET'})

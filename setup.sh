@@ -35,6 +35,11 @@ command -v docker >/dev/null 2>&1 || {
   exit 1
 }
 
+command -v jq >/dev/null 2>&1 || { 
+  echo "❌ jq is required but not installed. Please install it (e.g., sudo apt install jq)" >&2
+  exit 1
+}
+
 echo "✅ All prerequisites found"
 
 # ============================================================================
@@ -208,6 +213,60 @@ done
 echo ""
 
 # ============================================================================
+# IMPORT PROFESSIONAL DASHBOARD
+# ============================================================================
+echo "📊 Importing professional dashboard..."
+
+# Attempt to login and import dashboard with retry logic
+for i in {1..5}; do
+  # Get login token
+  TOKEN_RESPONSE=$(curl -s -H "Host: signoz.localhost" -H "Content-Type: application/json" \
+    -d '{"email":"admin@mikroways.net","password":"Mikroways123!"}' \
+    http://localhost/api/v1/login)
+
+  TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.data.accessJwt // empty')
+
+  if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
+    # Import dashboard
+    IMPORT_RESPONSE=$(curl -s -X POST -H "Host: signoz.localhost" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Content-Type: application/json" \
+      -d @dashboards/otel-demo-dashboard-v1.json \
+      http://localhost/api/v1/dashboards)
+    
+    if echo "$IMPORT_RESPONSE" | jq -e '.status == "success" or .uuid != null or (.data | has("id"))' >/dev/null; then
+      echo "✅ Professional dashboard imported successfully"
+      break
+    else
+      echo -n "."
+    fi
+  else
+    echo -n "."
+  fi
+  sleep 5
+done
+echo ""
+
+# ============================================================================
+# GENERATE INITIAL TRAFFIC
+# ============================================================================
+echo "🚀 Generating initial telemetry traffic..."
+for i in {1..10}; do
+  curl -s -H "Host: otel-example.localhost" http://localhost/ > /dev/null
+  curl -s -H "Host: otel-example.localhost" http://localhost/rolldice > /dev/null
+  curl -s -H "Host: otel-example.localhost" http://localhost/work > /dev/null
+  curl -s -H "Host: otel-example.localhost" http://localhost/error > /dev/null
+  
+  curl -s -H "Host: python-otel-example.localhost" http://localhost/ > /dev/null
+  curl -s -H "Host: python-otel-example.localhost" http://localhost/rolldice > /dev/null
+  curl -s -H "Host: python-otel-example.localhost" http://localhost/work > /dev/null
+  curl -s -H "Host: python-otel-example.localhost" http://localhost/error > /dev/null
+  echo -n "."
+  sleep 0.5
+done
+echo " Done!"
+
+# ============================================================================
 # SETUP COMPLETE
 # ============================================================================
 echo ""
@@ -220,18 +279,23 @@ echo "   URL:      http://signoz.localhost"
 echo "   User:     admin@mikroways.net"
 echo "   Password: Mikroways123!"
 echo ""
+echo "📈 Pre-imported Dashboard:"
+echo "   Go to 'Dashboards' and look for 'OpenTelemetry Demo - Professional Overview'"
+echo ""
 echo "🚀 Demo Application Endpoints:"
 echo ""
 echo "   Node.js App:"
 echo "   - Base:     http://otel-example.localhost/"
 echo "   - Dice:     http://otel-example.localhost/rolldice"
 echo "   - Work:     http://otel-example.localhost/work"
+echo "   - Error:    http://otel-example.localhost/error"
 echo "   - Health:   http://otel-example.localhost/health"
 echo ""
 echo "   Python App:"
 echo "   - Base:     http://python-otel-example.localhost/"
 echo "   - Dice:     http://python-otel-example.localhost/rolldice"
 echo "   - Work:     http://python-otel-example.localhost/work"
+echo "   - Error:    http://python-otel-example.localhost/error"
 echo "   - Health:   http://python-otel-example.localhost/health"
 echo ""
 echo "📝 Important Notes:"
