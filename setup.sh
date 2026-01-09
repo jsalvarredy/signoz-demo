@@ -142,16 +142,14 @@ helm upgrade --install otel-demo-app charts/otel-demo-app \
   --namespace demo \
   --create-namespace \
   -f charts/otel-demo-app/values.yaml \
-  --wait \
-  --timeout 3m
+  --wait --timeout 3m > /dev/null 2>&1
 
 # Deploy Python app
 echo "  🐍 Deploying Python app..."
 helm upgrade --install otel-python-app charts/otel-python-app \
   --namespace demo \
   -f charts/otel-python-app/values.yaml \
-  --wait \
-  --timeout 3m
+  --wait --timeout 3m > /dev/null 2>&1
 
 echo "✅ Demo apps deployed"
 
@@ -162,31 +160,6 @@ echo "⏳ Waiting for demo apps to be ready..."
 kubectl rollout status deployment/otel-demo-app -n demo --timeout=120s
 kubectl rollout status deployment/otel-python-app -n demo --timeout=120s
 
-# ============================================================================
-# GENERATE SAMPLE TRAFFIC
-# ============================================================================
-echo "🎲 Generating sample traffic to create observability data..."
-echo "   This will create traces, logs, and metrics in Signoz"
-
-# Generate diverse traffic to different endpoints
-for i in {1..5}; do
-  # Node.js app traffic
-  curl -s -H "Host: otel-example.localhost" http://localhost/ > /dev/null || true
-  curl -s -H "Host: otel-example.localhost" http://localhost/rolldice > /dev/null || true
-  curl -s -H "Host: otel-example.localhost" http://localhost/work > /dev/null || true
-  curl -s -H "Host: otel-example.localhost" http://localhost/health > /dev/null || true
-  
-  # Python app traffic
-  curl -s -H "Host: python-otel-example.localhost" http://localhost/ > /dev/null || true
-  curl -s -H "Host: python-otel-example.localhost" http://localhost/rolldice > /dev/null || true
-  curl -s -H "Host: python-otel-example.localhost" http://localhost/work > /dev/null || true
-  curl -s -H "Host: python-otel-example.localhost" http://localhost/health > /dev/null || true
-  
-  echo -n "."
-  sleep 1
-done
-echo ""
-echo "✅ Sample traffic generated"
 
 # ============================================================================
 # CONFIGURE SIGNOZ ADMIN USER
@@ -225,55 +198,84 @@ for i in {1..5}; do
     http://localhost/api/v1/login)
 
   TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.data.accessJwt // empty')
-
   if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
+        echo "Token Ok"
+  else
+        sleep 5
+  fi
+done
+for j in {1..3}; do
     # Import dashboard
     IMPORT_RESPONSE=$(curl -s -X POST -H "Host: signoz.localhost" \
       -H "Authorization: Bearer $TOKEN" \
       -H "Content-Type: application/json" \
-      -d @dashboards/otel-demo-dashboard-v1.json \
+      -d @dashboards/otel-demo-dashboard-v$j.json \
       http://localhost/api/v1/dashboards)
     
-    if echo "$IMPORT_RESPONSE" | jq -e '.status == "success" or .uuid != null or (.data | has("id"))' >/dev/null; then
-      echo "✅ Professional dashboard imported successfully"
-      break
-    else
-      echo -n "."
-    fi
-  else
-    echo -n "."
-  fi
-  sleep 5
-done
+done 
 echo ""
 
 # ============================================================================
 # GENERATE INITIAL TRAFFIC
 # ============================================================================
 echo "🚀 Generating initial telemetry traffic..."
-for i in {1..10}; do
-  curl -s -H "Host: otel-example.localhost" http://localhost/ > /dev/null
-  curl -s -H "Host: otel-example.localhost" http://localhost/rolldice > /dev/null
-  curl -s -H "Host: otel-example.localhost" http://localhost/work > /dev/null
-  curl -s -H "Host: otel-example.localhost" http://localhost/error > /dev/null
-  
-  curl -s -H "Host: python-otel-example.localhost" http://localhost/ > /dev/null
-  curl -s -H "Host: python-otel-example.localhost" http://localhost/rolldice > /dev/null
-  curl -s -H "Host: python-otel-example.localhost" http://localhost/work > /dev/null
-  curl -s -H "Host: python-otel-example.localhost" http://localhost/error > /dev/null
-  echo -n "."
-  sleep 0.5
-done
-echo " Done!"
+# ============================================================================
+# GENERATE SAMPLE TRAFFIC
+# ============================================================================
+echo "🎲 Generating sample traffic to create observability data..."
+echo "   This will create traces, logs, and metrics in Signoz"
 
-# ============================================================================
-# SETUP COMPLETE
-# ============================================================================
 echo ""
+
+
+
+# Function to make HTTP requests
+make_request() {
+    local host=$1
+    local path=$2
+    local method=${3:-GET}
+    local data=${4:-}
+    if [ "$method" = "POST" ]; then
+        curl -s -X POST \
+            -H "Host: $host" \
+            -H "Content-Type: application/json" \
+            -d "$data" \
+            http://localhost${path} > /dev/null 2>&1 || true
+    else
+        curl -s -H "Host: $host" http://localhost${path} > /dev/null 2>&1 || true
+    fi
+}
+# Simulate realistic e-commerce traffic                                          
+for i in {1..30}; do                                                             
+    # Users browsing products                                                    
+    make_request "otel-example.localhost" "/api/products"                        
+    make_request "otel-example.localhost" "/api/categories"                      
+    # Viewing individual products                                                
+    product_id=$((RANDOM % 8 + 1))                                               
+    make_request "otel-example.localhost" "/api/products/${product_id}"          
+    # Some users place orders (which calls Products Service from Orders Service) 
+    if (( RANDOM % 3 == 0 )); then                                               
+        order_data="{\"product_id\": ${product_id}, \"quantity\": 1, \"user_id\": \"user-$((RANDOM % 20 + 1))\"}"
+        make_request "python-otel-example.localhost" "/api/orders" "POST" "$order_data"
+    fi                                                                           
+    # Health checks                                                              
+    make_request "otel-example.localhost" "/health"                              
+    make_request "python-otel-example.localhost" "/health"                       
+    # Occasional errors for interesting data                                     
+    if (( i % 10 == 0 )); then                                                   
+        make_request "otel-example.localhost" "/error"                           
+        make_request "python-otel-example.localhost" "/error"                    
+    fi                                                                           
+    # Progress indicator                                                         
+    echo -n "."                                                                  
+    sleep 0.3                                                                    
+done   
+
+echo "✅ Sample traffic generated"
+
 echo "════════════════════════════════════════════════════════════════"
 echo "✅ Setup Complete! Your Signoz + OpenTelemetry demo is ready"
 echo "════════════════════════════════════════════════════════════════"
-echo ""
 echo "📊 Signoz UI (Observability Platform):"
 echo "   URL:      http://signoz.localhost"
 echo "   User:     admin@mikroways.net"
@@ -283,21 +285,21 @@ echo "📈 Pre-imported Dashboard:"
 echo "   Go to 'Dashboards' and look for 'OpenTelemetry Demo - Professional Overview'"
 echo ""
 echo "🚀 Demo Application Endpoints:"
-echo ""
-echo "   Node.js App:"
-echo "   - Base:     http://otel-example.localhost/"
-echo "   - Dice:     http://otel-example.localhost/rolldice"
-echo "   - Work:     http://otel-example.localhost/work"
-echo "   - Error:    http://otel-example.localhost/error"
-echo "   - Health:   http://otel-example.localhost/health"
-echo ""
-echo "   Python App:"
-echo "   - Base:     http://python-otel-example.localhost/"
-echo "   - Dice:     http://python-otel-example.localhost/rolldice"
-echo "   - Work:     http://python-otel-example.localhost/work"
-echo "   - Error:    http://python-otel-example.localhost/error"
-echo "   - Health:   http://python-otel-example.localhost/health"
-echo ""
+
+echo -e "🎮 Generate More Traffic:"                                  
+echo -e "   # Browse products"                                     
+echo -e "   curl http://otel-example.localhost/api/products"                     
+echo ""                                                                          
+echo -e "   # Create an order (triggers inter-service call)"       
+echo -e "   curl -X POST http://python-otel-example.localhost/api/orders \\"     
+echo -e "     -H 'Content-Type: application/json' \\"                            
+echo -e "     -d '{\"product_id\": 1, \"quantity\": 1, \"user_id\": \"user-123\"}'"
+echo ""                                                                          
+                                                                                 
+echo -e "🧹 Cleanup:"                                                
+echo -e "   kind delete cluster --name signoz-demo"                        
+echo ""            
+
 echo "📝 Important Notes:"
 echo "   - Add to /etc/hosts: 127.0.0.1 signoz.localhost otel-example.localhost python-otel-example.localhost"
 echo "   - Generate more traffic by visiting the demo app endpoints"
@@ -314,3 +316,19 @@ echo "   4. Go to 'Dashboards' → create custom visualizations"
 echo "   5. Notice how OpenTelemetry works seamlessly across different languages!"
 echo ""
 echo "═══════════════════════════════════════════════════════════════="
+
+
+
+
+
+
+
+
+
+# Create or update .envrc for direnv users
+if [ ! -f .envrc ]; then
+    cp .envrc-example .envrc 2>/dev/null || true
+    if command -v direnv &> /dev/null; then
+        direnv allow 2>/dev/null || true
+    fi
+fi
