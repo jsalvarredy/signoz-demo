@@ -25,5 +25,5 @@ resources:
     memory: 64Mi
 
 env:
-  # Signoz OTEL Collector endpoint (base URL, paths added in app)
+  # OTEL Collector endpoint
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://signoz-otel-collector.monitoring.svc.cluster.local:4318"
