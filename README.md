@@ -1,479 +1,166 @@
-# Signoz OpenTelemetry Demo
+# Microservices Observability Demo with Signoz & OpenTelemetry
 
-> **⚠️ DEMO ENVIRONMENT** - This repository is designed for demonstration and learning purposes. It showcases a complete observability stack using Signoz and OpenTelemetry in a local Kubernetes environment.
+> **⚠️ DEMO ENVIRONMENT** - This repository provides a comprehensive reference architecture for observing microservices using Signoz and OpenTelemetry. It is intended for educational and demonstration purposes within a local Kubernetes environment.
 
 [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-Instrumented-blue?logo=opentelemetry)](https://opentelemetry.io/)
 [![Signoz](https://img.shields.io/badge/Signoz-v0.104-orange)](https://signoz.io/)
 [![Kind](https://img.shields.io/badge/Kubernetes-Kind-326CE5?logo=kubernetes)](https://kind.sigs.k8s.io/)
 
-A complete, ready-to-run demonstration of modern observability using **Signoz** (open-source observability platform) and **OpenTelemetry** (vendor-neutral instrumentation). This demo showcases the collection and visualization of **traces**, **metrics**, and **logs** from sample applications in both **Node.js** and **Python**, demonstrating OpenTelemetry's language-agnostic capabilities.
+This project demonstrates a production-grade observability stack implementing **Signoz** (Open Source Observability Platform) and **OpenTelemetry** (Vendor-neutral instrumentation). It simulates a realistic e-commerce environment with polyglot microservices (**Node.js** and **Python**) to showcase distributed tracing, metrics aggregation, and structured logging in a heterogeneous architecture.
 
-## 🎯 What This Demo Shows
+## 🎯 Architecture Overview
 
-This repository demonstrates a **production-grade observability setup** that you can run locally in minutes:
+The demo simulates a simplified e-commerce platform consisting of two primary microservices:
 
-- **🌐 Multi-Language Support**: See OpenTelemetry work seamlessly across Node.js and Python
-- **📊 Signoz Platform**: Open-source alternative to Datadog/New Relic
-- **🔍 Distributed Tracing**: Visualize request flows and identify bottlenecks
-- **📈 Custom Metrics**: Track business and technical KPIs
-- **📝 Structured Logging**: JSON logs with automatic trace correlation
-- **🔄 Full Integration**: See how traces, metrics, and logs work together
+1.  **Product Service (Node.js)**: Manages the product catalog and categories.
+2.  **Order Service (Python)**: Handles order processing and performs synchronous inter-service communication with the Product Service to validate items.
 
-## 🏗️ Architecture
+This architecture demonstrates common distributed system patterns and their observability requirements:
 
-```
-┌─────────────────────────────────────────────────────┐
-│              Kind Kubernetes Cluster                 │
-├─────────────────────────────────────────────────────┤
-│                                                      │
-│  ┌──────────────┐         ┌──────────────┐         │
-│  │    Nginx     │◄────────┤   Ingress    │         │
-│  │   Ingress    │  :80    │   Resources  │         │
-│  └──────┬───────┘         └──────────────┘         │
-│         │                                           │
-│    ┌────┴──────┬──────────────┬─────────────┐      │
-│    │           │              │             │      │
-│  ┌─▼────────┐ ┌▼───────────┐ ┌▼───────────┐ │      │
-│  │          │ │            │ │            │ │      │
-│  │ Signoz   │ │ Node.js    │ │  Python    │ │      │
-│  │          │ │  Demo      │ │   Demo     │ │      │
-│  │  • UI    │ │            │ │            │ │      │
-│  │  • Query │◄─┤ OTEL SDK   │◄─┤ OTEL SDK   │ │     │
-│  │  • OTEL  │ │  • Traces  │ │  • Traces  │ │      │
-│  │  • Click │ │  • Metrics │ │  • Metrics │ │      │
-│  │  House   │ │  • Logs    │ │  • Logs    │ │      │
-│  │          │ │            │ │            │ │      │
-│  └──────────┘ └────────────┘ └────────────┘ │      │
-│                                              │      │
-│        signoz.localhost    otel-example      │      │
-│                            .localhost         │      │
-│                                               │      │
-│                              python-otel-example     │
-│                              .localhost              │
-└─────────────────────────────────────────────────────┘
+*   **Synchronous Inter-service Communication**: Tracing requests across service boundaries.
+*   **Polyglot Environments**: Correlating telemetries from different languages.
+*   **Error Propagation**: Visualizing how upstream errors affect downstream services.
+
+```mermaid
+graph LR
+    User((User))
+    Ingress[Nginx Ingress]
+    
+    subgraph Cluster [Kind Cluster]
+        direction TB
+        Ingress --> |HTTP| ProductSvc[Product Service<br/>Node.js]
+        Ingress --> |HTTP| OrderSvc[Order Service<br/>Python]
+        
+        OrderSvc -.-> |REST /api/products/:id| ProductSvc
+        
+        ProductSvc --> |OTLP| Collector[OTEL Collector]
+        OrderSvc --> |OTLP| Collector
+        
+        Collector --> Signoz[Signoz Platform]
+    end
+    
+    style ProductSvc fill:#f9f,stroke:#333,stroke-width:2px
+    style OrderSvc fill:#bbf,stroke:#333,stroke-width:2px
+    style Signoz fill:#dfd,stroke:#333,stroke-width:2px
 ```
 
-## ⚡ Quick Start
+## ⚡ Rapid Deployment
 
 ### Prerequisites
 
-Ensure you have these tools installed:
+Ensure the following DevOps toolchain is available in your shell:
 
-- **Docker** (≥20.10) - [Install](https://docs.docker.com/get-docker/)
-- **Kind** (≥0.20) - [Install](https://kind.sigs.k8s.io/docs/user/quick-start/)
-- **Kubectl** (≥1.28) - [Install](https://kubernetes.io/docs/tasks/tools/)
-- **Helm** (≥3.12) - [Install](https://helm.sh/docs/intro/install/)
+*   **Docker** (≥20.10)
+*   **Kind** (≥0.20)
+*   **Kubectl** (≥1.28)
+*   **Helm** (≥3.12)
 
-### One-Command Setup
+### Provisioning Infrastructure
+
+Execute the bootstrap script to provision the Kubernetes cluster and deploy the complete stack:
 
 ```bash
 ./setup.sh
 ```
 
-**Setup time**: ~5-10 minutes (depending on your internet connection)
+**Estimated Provisioning Time**: ~5-10 minutes.
 
-The script will:
-1. ✅ Validate prerequisites
-2. ✅ Create a Kind cluster
-3. ✅ Build and load the demo application
-4. ✅ Deploy Nginx Ingress
-5. ✅ Deploy Signoz (ClickHouse, OTEL Collector, Query Service, UI)
-6. ✅ Deploy the instrumented demo app
-7. ✅ Configure admin credentials
-8. ✅ Generate sample telemetry data
+The automation script performs the following idempotent operations:
+1.  **Infrastructure Validation**: Checks for required binaries.
+2.  **Cluster Provisioning**: Bootstraps a local Kind cluster.
+3.  **Artifact Management**: Builds and preloads Docker images to the cluster control plane to avoid registry dependency.
+4.  **Platform Deployment**: Installs Nginx Ingress Controller and the Signoz Observability Platform via Helm.
+5.  **Application Deployment**: Deploys the microservices (Products & Orders).
+6.  **Traffic Simulation**: Generates synthetic load to populate initial telemetry data.
 
-### Configure DNS Resolution
+### DNS Configuration
 
-Add these entries to your `/etc/hosts` file:
+To simulate production routing on your local machine, map the ingress hosts in your `/etc/hosts` file:
 
 ```bash
+# Append to /etc/hosts
 127.0.0.1 signoz.localhost otel-example.localhost python-otel-example.localhost
 ```
 
-**On macOS/Linux**:
-```bash
-sudo sh -c 'echo "127.0.0.1 signoz.localhost otel-example.localhost python-otel-example.localhost" >> /etc/hosts'
-```
+## 🖥️ Service Endpoints
 
-**On Windows** (as Administrator):
-```powershell
-Add-Content C:\Windows\System32\drivers\etc\hosts "127.0.0.1 signoz.localhost otel-example.localhost python-otel-example.localhost"
-```
+### Observability Platform
 
-### Access the Platform
+| Service | URL | Credentials |
+| :--- | :--- | :--- |
+| **Signoz UI** | [http://signoz.localhost](http://signoz.localhost) | **User**: `admin@mikroways.net`<br>**Pass**: `Mikroways123!` |
 
-**Signoz UI**: [http://signoz.localhost](http://signoz.localhost)
-```
-Email:    admin@mikroways.net
-Password: Mikroways123!
-```
+### Microservices
 
-**Demo Application**: 
-- Node.js: [http://otel-example.localhost](http://otel-example.localhost)
-- Python: [http://python-otel-example.localhost](http://python-otel-example.localhost)
+| Service | Hostname | Core Responsibility |
+| :--- | :--- | :--- |
+| **Product Service** | `otel-example.localhost` | Catalog queries (GET /api/products) |
+| **Order Service** | `python-otel-example.localhost` | Order creation (POST /api/orders) |
 
-## 🧪 Exploring the Demo
+## 🧪 Telemetry Generation & Analysis
 
-### Demo Application Endpoints
+### 1. Generating Synthetic Traffic
 
-Both demo applications expose the same endpoints to showcase identical observability patterns across different programming languages:
-
-#### Node.js Application (otel-example.localhost)
-
-| Endpoint | Purpose | Observability Features |
-|----------|---------|------------------------|
-| **`/`** | Welcome page | Basic request tracing, metrics |
-| **`/rolldice`** | Dice roll simulator | Custom metrics (histogram), span attributes |
-| **`/work`** | Simulated work | Nested spans (DB + API), multi-operation tracing |
-| **`/error`** | Error simulation | 500 status code, error span status, error logs |
-| **`/health`** | Health check | Simple monitoring endpoint |
-
-#### Python Application (python-otel-example.localhost)
-
-| Endpoint | Purpose | Observability Features |
-|----------|---------|------------------------|
-| **`/`** | Welcome page | Basic request tracing, metrics |
-| **`/rolldice`** | Dice roll simulator | Custom metrics (histogram), span attributes |
-| **`/work`** | Simulated work | Nested spans (DB + API), multi-operation tracing |
-| **`/error`** | Error simulation | 500 status code, error span status, error logs |
-| **`/health`** | Health check | Simple monitoring endpoint |
-
-### Generate Traffic
+The platform includes endpoints designed to simulate user activity. Run the following shell loop to generate a mix of successful transactions and errors:
 
 ```bash
-# Generate diverse traffic patterns to both applications
+# Simulate realistic user behavior: browsing and purchasing
 for i in {1..20}; do
-  # Node.js app
-  curl -s http://otel-example.localhost/rolldice > /dev/null
-  curl -s http://otel-example.localhost/work > /dev/null
-  curl -s http://otel-example.localhost/error > /dev/null
+  # 1. User browses catalog (Node.js Service)
+  curl -s "http://otel-example.localhost/api/products" > /dev/null
+  curl -s "http://otel-example.localhost/api/categories" > /dev/null
   
-  # Python app
-  curl -s http://python-otel-example.localhost/rolldice > /dev/null
-  curl -s http://python-otel-example.localhost/work > /dev/null
-  curl -s http://python-otel-example.localhost/error > /dev/null
+  # 2. User views specific product (Node.js Service)
+  PRODUCT_ID=$((RANDOM % 5 + 1))
+  curl -s "http://otel-example.localhost/api/products/${PRODUCT_ID}" > /dev/null
+  
+  # 3. User places an order (Python Service calls Node.js Service)
+  curl -s -X POST "http://python-otel-example.localhost/api/orders" \
+       -H "Content-Type: application/json" \
+       -d "{\"product_id\": ${PRODUCT_ID}, \"quantity\": 1, \"user_id\": \"test-user\"}" > /dev/null
+
+  # 4. Trigger occasional errors for analysis
+  curl -s "http://otel-example.localhost/error" > /dev/null
   
   sleep 1
 done
 ```
 
-### What to Explore in Signoz
+### 2. Monitoring & Debugging
 
-#### 1. **Distributed Tracing** 🔍
-- Navigate to **Services** → You'll see both `otel-demo-app` (Node.js) and `otel-python-app` (Python)
-- Click on either service
-- Click on **Traces** to see individual requests
-- Examine trace details:
-  - Request duration breakdown
-  - Nested spans (database queries, API calls)
-  - Custom attributes (dice value, endpoints)
-  - Error tracking and exceptions
-- Compare traces from both languages to see identical instrumentation patterns!
+Navigate to the Signoz UI to analyze the captured telemetry.
 
-#### 2. **Metrics Dashboard** 📈
-- Go to **Dashboard** or **Query Builder**
-- Explore metrics:
-  - `http_requests_total` - Request counter by endpoint
-  - `dice_roll_value` - Distribution of dice rolls
-  - Auto-instrumented HTTP metrics (latency, throughput)
-- Create custom visualizations and alerts
+#### 🔍 Distributed Tracing
+*   **Scenario**: Analyze the `POST /api/orders` flow.
+*   **Observation**: Identify the specific span where the Python service makes an HTTP request to the Node.js service (`GET /api/products/:id`).
+*   **Goal**: Validate latency attribution between the Order Service processing and the external Product Service dependency.
 
-#### 3. **Structured Logs** 📝
-- Navigate to **Logs**
-- Filter by service: `otel-demo-app` or `otel-python-app`
-- Key features:
-  - JSON structured logs from both applications
-  - Automatic trace correlation (trace_id, span_id)
-  - Click any log to jump to its associated trace
-  - Search and filter by custom attributes
-- Notice how logs from different languages follow the same structured format!
+#### 📈 Metrics & Dashboarding
+*   Access the **"OpenTelemetry Demo - Professional Overview"** dashboard.
+*   Review RED method metrics (Rate, Errors, Duration) for each service.
+*   Compare resource utilization and throughput between the Node.js and Python runtimes.
 
-#### 4. **Correlation** 🔗
-- Click on any trace to see associated logs
-- Switch between traces, metrics, and logs for the same request
-- Understand how the **three pillars of observability** work together
+#### 📝 Structured Logging
+*   Inspect logs for the `otel-demo-app` (Node.js) and `otel-python-app` (Python).
+*   Verify that `trace_id` and `span_id` are automatically injected into log context, enabling direct correlation from a log line to the specific distributed trace.
 
-### 5. **Professional Dashboard** 📊
+## 🔧 Instrumentation Implementation
 
-The demo now includes a comprehensive, production-ready dashboard that is **automatically imported** during setup.
+The repository implements industry-standard OpenTelemetry instrumentation patterns:
 
-**📘 [Dashboard Guide & Details](./DASHBOARD_GUIDE.md)**
-
-The pre-configured dashboard includes:
-- **20+ panels** showcasing the power of SigNoz
-- **Multi-language comparison** (Node.js vs Python side-by-side)
-- **Golden signals monitoring** (latency, traffic, errors, saturation)
-- **Custom business metrics** (dice roll distributions, endpoint analytics)
-- **Log correlation** with automatic trace linking
-
-**How to access**:
-1. Run `./setup.sh` (The dashboard is imported automatically)
-2. Login to [http://signoz.localhost](http://signoz.localhost)
-3. Navigate to **Dashboards** and select **"OpenTelemetry Demo - Professional Overview"**
-
-> 💡 **Tip**: Check the [Dashboard Guide](./DASHBOARD_GUIDE.md) for detailed explanations of each panel and manual setup instructions if you want to customize your own!
-
-## 🔧 Technical Details
-
-### OpenTelemetry Instrumentation
-
-The demo applications showcase production-ready instrumentation patterns in multiple languages:
-
-#### Node.js Application (`src/otel-app/`)
-
-| Component | Technology | Configuration |
-|-----------|-----------|---------------|
-| **SDK** | `@opentelemetry/sdk-node` | Centralized in `tracing.js` |
-| **Traces** | OTLP/HTTP | Endpoint: `http://signoz-otel-collector:4318/v1/traces` |
-| **Metrics** | OTLP/HTTP | Periodic export (10s interval) |
-| **Logs** | OTLP/HTTP | Batch processor with trace correlation |
-| **Auto-instrumentation** | `@opentelemetry/auto-instrumentations-node` | HTTP, Express, etc. |
-
-#### Python Application (`src/otel-python-app/`)
-
-| Component | Technology | Configuration |
-|-----------|-----------|---------------|
-| **SDK** | `opentelemetry-distro` | Configured in `app.py` |
-| **Traces** | OTLP/HTTP | Endpoint: `http://signoz-otel-collector:4318/v1/traces` |
-| **Metrics** | OTLP/HTTP | Periodic export (10s interval) |
-| **Logs** | OTLP/HTTP | Batch processor with trace correlation |
-| **Auto-instrumentation** | `opentelemetry-instrumentation-flask` | Flask auto-instrumentation |
-
-### Custom Instrumentation Examples
-
-```javascript
-// Custom Metrics
-const requestCounter = meter.createCounter('http_requests_total');
-requestCounter.add(1, { endpoint: '/rolldice' });
-
-// Custom Spans
-const span = trace.getTracer('app').startSpan('operation');
-span.setAttribute('custom.attribute', value);
-
-// Structured Logs with Trace Correlation
-logger.emit({
-  severityText: 'INFO',
-  body: JSON.stringify({ message, data }),
-  attributes: {
-    trace_id: spanContext.traceId,
-    span_id: spanContext.spanId
-  }
-});
-```
-
-### Signoz Components
-
-- **ClickHouse**: Time-series database for telemetry storage
-- **OTEL Collector**: Receives, processes, and exports telemetry
-- **Query Service**: API for querying telemetry data
-- **Frontend**: Web UI for visualization and analysis
-
-## 📁 Repository Structure
-
-```
-.
-├── setup.sh                      # Main setup script
-├── README.md                     # This file
-├── DASHBOARD_GUIDE.md            # Professional dashboard setup guide
-│
-├── dashboards/                   # Pre-configured dashboard templates
-│   └── otel-demo-dashboard-v1.json
-│
-├── src/
-│   ├── otel-app/                 # Node.js demo application
-│   │   ├── index.js              # Express app with OTEL instrumentation
-│   │   ├── tracing.js            # OpenTelemetry SDK configuration
-│   │   ├── package.json          # Node.js dependencies
-│   │   └── Dockerfile            # Container image definition
-│   │
-│   └── otel-python-app/          # Python demo application
-│       ├── app.py                # Flask app with OTEL instrumentation
-│       ├── requirements.txt      # Python dependencies
-│       └── Dockerfile            # Container image definition
-│
-├── charts/
-│   ├── otel-demo-app/            # Helm chart for Node.js app
-│   │   ├── Chart.yaml            # Chart metadata
-│   │   ├── values.yaml           # Default configuration
-│   │   └── templates/            # Kubernetes manifests
-│   │       ├── deployment.yaml   # App deployment
-│   │       ├── service.yaml      # ClusterIP service
-│   │       └── ingress.yaml      # HTTP ingress
-│   │
-│   └── otel-python-app/          # Helm chart for Python app
-│       ├── Chart.yaml            # Chart metadata
-│       ├── values.yaml           # Default configuration
-│       └── templates/            # Kubernetes manifests
-│           ├── deployment.yaml   # App deployment
-│           ├── service.yaml      # ClusterIP service
-│           └── ingress.yaml      # HTTP ingress
-│
-└── kind/                         # Kind cluster configuration
-    ├── .kind/config.yaml         # Cluster definition (port mappings)
-    ├── signoz-ingress.yaml       # Signoz UI ingress
-    └── helmfile.d/               # Helm chart configurations
-        ├── 03-ingress-nginx.yaml # Nginx ingress controller
-        ├── 04-signoz.yaml        # Signoz platform
-        └── values/               # Custom values
-            ├── signoz/
-            │   └── values.yaml   # Signoz config (resources, ingress)
-            └── ingress-nginx/
-                └── values.yaml
-```
-
-## 🛠️ Customization
-
-### Modify Demo Applications
-
-Edit application code to add more endpoints or instrumentation:
-
-**Node.js** (`src/otel-app/index.js`):
-```javascript
-// Add a new instrumented endpoint
-app.get('/custom', (req, res) => {
-  const span = trace.getTracer('app').startSpan('custom-operation');
-  
-  emitLog('INFO', 'Custom endpoint called', { user: 'demo' });
-  requestCounter.add(1, { endpoint: '/custom' });
-  
-  // Your logic here
-  
-  span.end();
-  res.json({ status: 'ok' });
-});
-```
-
-**Python** (`src/otel-python-app/app.py`):
-```python
-# Add a new instrumented endpoint
-@app.route('/custom')
-def custom():
-    with tracer.start_as_current_span('custom-operation') as span:
-        emit_log('INFO', 'Custom endpoint called', user='demo')
-        request_counter.add(1, {'endpoint': '/custom'})
-        
-        # Your logic here
-        
-        return jsonify({'status': 'ok'})
-```
-
-Then rebuild and redeploy:
-
-```bash
-export KUBECONFIG=$PWD/kind/.kube/config
-
-# For Node.js app
-docker build -t otel-demo-app:latest src/otel-app
-kind load docker-image otel-demo-app:latest --name signoz-demo
-kubectl rollout restart deployment/otel-demo-app -n demo
-
-# For Python app
-docker build -t otel-python-app:latest src/otel-python-app
-kind load docker-image otel-python-app:latest --name signoz-demo
-kubectl rollout restart deployment/otel-python-app -n demo
-```
-
-### Adjust Signoz Resources
-
-Edit `kind/helmfile.d/values/signoz/values.yaml` to modify resource limits or configuration.
-
-## 🧹 Cleanup
-
-To completely remove the demo environment:
-
-```bash
-kind delete cluster --name signoz-demo
-```
-
-This will delete the cluster and all resources. Your Docker images will remain cached locally.
+*   **Node.js**: Uses `@opentelemetry/sdk-node` with auto-instrumentation for Express and HTTP modules. trace context propagation is handled automatically for downstream calls.
+*   **Python**: Uses `opentelemetry-distro` with Flask instrumentation. Demonstrates manual span creation and attribute injection for business logic monitoring.
 
 ## 🐛 Troubleshooting
 
-### Signoz UI Not Loading
-
-**Issue**: Signoz UI shows "connection refused" or doesn't load
-
-**Solutions**:
-1. Wait 2-3 minutes after setup completes for all pods to be ready
-2. Check pod status:
-   ```bash
-   kubectl get pods -n monitoring --kubeconfig kind/.kube/config
-   ```
-3. Verify all pods are `Running` (ClickHouse takes longest to start)
-
-### No Logs/Traces Appearing
-
-**Issue**: Signoz is empty despite generating traffic
-
-**Solutions**:
-1. Verify demo app is running:
-   ```bash
-   kubectl get pods -n demo --kubeconfig kind/.kube/config
-   ```
-2. Check app logs for errors:
-   ```bash
-   kubectl logs -n demo -l app.kubernetes.io/name=otel-demo-app --kubeconfig kind/.kube/config
-   ```
-3. Ensure OTEL collector is reachable:
-   ```bash
-   kubectl get svc -n monitoring --kubeconfig kind/.kube/config
-   ```
-
-### DNS Resolution Issues
-
-**Issue**: Browser can't resolve `signoz.localhost` or `otel-example.localhost`
-
-**Solutions**:
-1. Verify `/etc/hosts` entry exists
-2. Try using `127.0.0.1` directly instead of localhost
-3. Clear browser DNS cache (Chrome: `chrome://net-internals/#dns`)
-
-### Kind Cluster Issues
-
-**Issue**: Cluster creation fails or is stuck
-
-**Solutions**:
-1. Delete existing cluster: `kind delete cluster --name signoz-demo`
-2. Ensure Docker daemon is running: `docker ps`
-3. Check Docker resource limits (ensure 4GB+ RAM available)
-
-## 📚 Learning Resources
-
-- **Signoz Documentation**: https://signoz.io/docs/
-- **OpenTelemetry Docs**: https://opentelemetry.io/docs/
-- **OpenTelemetry JavaScript**: https://opentelemetry.io/docs/instrumentation/js/
-- **Kubernetes Kind**: https://kind.sigs.k8s.io/docs/user/quick-start/
-- **ClickHouse**: https://clickhouse.com/docs/
-
-## 🤝 Contributing
-
-This is a demonstration repository. Feel free to fork and adapt for your own needs!
-
-**Current Features**:
-- ✅ Multi-language examples (Node.js and Python)
-- ✅ Professional dashboard guide with 20+ panels
-- ✅ Comprehensive observability (traces, metrics, logs)
-- ✅ Production-ready instrumentation patterns
-
-Suggestions for further improvement:
-- Additional language examples (Go, Java, Ruby, Rust)
-- More complex microservice scenarios with service-to-service communication
-- Custom Signoz alert configurations
-- Integration with other observability tools (Prometheus, Grafana)
-- Kubernetes-native instrumentation examples
-- Performance testing scenarios
+*   **Pods Pending**: Check cluster resources. Signoz + ClickHouse requires significant RAM (allocated 4GB+ to Docker).
+*   **Ingress 404**: Ensure `/etc/hosts` mapping is correct and Ingress Controller pod is `Running`.
+*   **Missing Data**: Verify OTEL Collector connectivity using `kubectl logs -n monitoring -l app=signoz-otel-collector`.
 
 ## ⚖️ License
 
-MIT License - See LICENSE file for details
-
-## 🙏 Acknowledgments
-
-- **Signoz Team** for building an excellent open-source observability platform
-- **OpenTelemetry Community** for vendor-neutral instrumentation standards
-- **Kubernetes SIG** for Kind cluster tooling
+MIT License. See [LICENSE](./LICENSE) for full text.
 
 ---
-
-**Built for demonstration and learning**  
-Questions? Open an issue or check the troubleshooting section above.
+**Maintained by DevOps Engineering Team**
+*Reference implementation for internal training and architecture validation.*
